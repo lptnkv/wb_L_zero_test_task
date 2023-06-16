@@ -1,0 +1,5 @@
+.env
+.vscode
+initdb.sql
+service-data
+nats-streaming

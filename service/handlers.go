@@ -26,3 +26,9 @@ type OrderFormHandler struct{}
 func (handler *OrderFormHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Here will be form")
 }
+
+type TestStanHandler struct{}
+
+func (handler *TestStanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Here will be publishing to stan")
+}

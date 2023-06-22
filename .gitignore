@@ -1,5 +1,11 @@
+# environment and settings
 .env
 .vscode
+
+# docker
 initdb.sql
 service-data
 nats-streaming
+
+# playing around and testing
+stan_playground

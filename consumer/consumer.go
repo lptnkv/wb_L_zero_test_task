@@ -19,7 +19,6 @@ func main() {
 	}
 	log.Println("Connected to test-cluster")
 	sub, err := sc.Subscribe("orders", func(m *stan.Msg) {
-		// fmt.Printf("Received a message: %s\n", string(m.Data))
 		received := DecodeToOrder(m.Data)
 		fmt.Printf("Received a struct: %+v\n", received)
 	})

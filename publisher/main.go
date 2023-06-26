@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
+	"flag"
 	"log"
 	"lptnkv/orders/service"
 
@@ -12,7 +12,23 @@ import (
 )
 
 func main() {
-	sc, _ := stan.Connect("test-cluster", "wb-l0-client")
+	isCorruptedData := flag.Bool("corrupt", false, "Choose to publish fake order or corrupted data")
+	flag.Parse()
+
+	sc, err := stan.Connect("test-cluster", "wb-l0-client1")
+	if err != nil {
+		log.Fatalf("Could not connect to cluster: %+v\n", err)
+	}
+
+	if *isCorruptedData {
+		log.Println("Publishing wrong data")
+		err = sc.Publish("orders", []byte("wrong data"))
+		if err != nil {
+			log.Fatalf("Could not publish to topic: %v", err)
+		}
+		sc.Close()
+		return
+	}
 
 	var fakeOrder service.Order
 	faker.FakeData(&fakeOrder)
@@ -27,12 +43,13 @@ func main() {
 	fakeOrder.Delivery.Address = faker.GetRealAddress().Address
 	fakeOrder.Delivery.Region = faker.GetRealAddress().State
 	fakeOrder.Payment.Transaction = fakeOrder.OrderUID
-	fmt.Printf("%+v\n", fakeOrder)
+
 	log.Println("Publishing fake order")
-	err := sc.Publish("orders", EncodeToBytes(fakeOrder))
+	err = sc.Publish("orders", EncodeToBytes(fakeOrder))
 	if err != nil {
 		log.Fatalf("Could not publish to topic: %v", err)
 	}
+	sc.Close()
 }
 
 func EncodeToBytes(p interface{}) []byte {
@@ -43,6 +60,6 @@ func EncodeToBytes(p interface{}) []byte {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("uncompressed size (bytes): ", len(buf.Bytes()))
+	// fmt.Println("uncompressed size (bytes): ", len(buf.Bytes()))
 	return buf.Bytes()
 }

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L0 task</title>
+</head>
+
+<body>
+    <form method="get">
+        <input type="text" placeholder="uid" name="uid">
+        <input type="submit">
+    </form>
+    {{.Message}}
+    {{if .Success}}
+        <p>{{.Order.OrderUID}}</p>
+    {{else}}
+        <p>Введите корректный uid</p>
+    {{end}}
+
+
+</body>
+
+</html>

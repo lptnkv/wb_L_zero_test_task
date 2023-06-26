@@ -13,17 +13,25 @@ func (handler *AddOrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	fmt.Fprintln(w, "Here will be POST method to handle adding of order to database")
 }
 
-type GetOrderHandler struct{}
+type GetOrderHandler struct {
+	Cache map[OrderUID]Order
+}
 
+// Контроллер для получения заказа по uid
 func (handler *GetOrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fmt.Println(vars)
-	fmt.Fprintln(w, "Here will be Get method to get Order by id")
+	res, ok := handler.Cache[OrderUID(vars["id"])]
+	if !ok {
+		fmt.Fprintf(w, "Not found")
+		return
+	}
+	fmt.Fprintf(w, "%+v\n", res)
 }
 
-type OrderFormHandler struct{}
+type MockHandler struct{}
 
-func (handler *OrderFormHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *MockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Here will be form")
 }
 

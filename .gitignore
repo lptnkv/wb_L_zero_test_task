@@ -6,6 +6,7 @@
 initdb.sql
 service-data
 nats-streaming
+init.sql
 
 # playing around and testing
 stan_playground

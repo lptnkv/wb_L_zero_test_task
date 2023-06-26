@@ -1,33 +1,36 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-type AddOrderHandler struct{}
-
-func (handler *AddOrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Here will be POST method to handle adding of order to database")
-}
-
+// Контроллер для получения заказа по uid в формате json
 type GetOrderHandler struct {
 	Cache map[OrderUID]Order
 }
 
-// Контроллер для получения заказа по uid в формате json
 func (handler *GetOrderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fmt.Println(vars)
 	res, ok := handler.Cache[OrderUID(vars["id"])]
 	if !ok {
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Not found")
 		return
 	}
-	fmt.Fprintf(w, "%+v\n", res)
+	jsonRes, err := json.Marshal(res)
+	if err != nil {
+		log.Println("Could not marshal json")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Write(jsonRes)
 }
 
 type IndexHandler struct {

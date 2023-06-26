@@ -17,8 +17,16 @@
         <ul>
             <li>OrderUID:{{.Order.OrderUID}}</li>
             <li>Track Number {{.Order.TrackNumber}}</li>
-            <li>entry:{{.Order.Entry}}</li>
-            <li>Delivery: </li>
+            <li>Entry:{{.Order.Entry}}</li>
+            <li>Locale:{{.Order.Locale}}</li>
+            <li>Internal Signature:{{.Order.InternalSignature}}</li>
+            <li>Customer ID:{{.Order.CustomerID}}</li>
+            <li>Delivery Service:{{.Order.DeliveryService}}</li>
+            <li>Shard key:{{.Order.Shardkey}}</li>
+            <li>SmID:{{.Order.SmID}}</li>
+            <li>Date Created:{{.Order.DateCreated}}</li>
+            <li>OofShard:{{.Order.OofShard}}</li>
+            <p>Delivery: </p>
             <ul>
                 <li>
                     Name: {{.Order.Delivery.Name}}

@@ -25,8 +25,6 @@ func main() {
 	// Router and endpoints
 	router := mux.NewRouter()
 	router.Handle("/", &service.IndexHandler{Cache: cache})
-	router.Handle("/order/{id}", &service.GetOrderHandler{Cache: cache})
-	router.Handle("/mock", &service.MockHandler{})
 	server := http.Server{
 		Addr:    "127.0.0.1:8080",
 		Handler: router,

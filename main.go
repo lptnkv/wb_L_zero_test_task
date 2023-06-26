@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	stan "github.com/nats-io/stan.go"
@@ -84,7 +85,7 @@ func init() {
 	cache = make(map[service.OrderUID]service.Order)
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Some error occured. Err: %s", err)
+		log.Fatalf("Some error occured loading env: %s", err)
 	}
 	conn, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -193,5 +194,95 @@ func DecodeToOrder(s []byte) (service.Order, error) {
 }
 
 func AddToDatabase(order service.Order) error {
-
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Printf("Some error occured loading env: %s\n", err)
+		return err
+	}
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	defer conn.Close(context.Background())
+	if err != nil {
+		log.Printf("Unable to connect to database: %v\n", err)
+		return err
+	}
+	// Начинаем транзакцию
+	tx, err := conn.BeginTx(context.Background(), pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	tx.Begin(context.Background())
+	// Добавляем товары и сохраняем их id для вставки в таблицу order_item
+	itemIds := make([]int, len(order.Items))
+	for i, val := range order.Items {
+		var itemId int
+		insertItemQuery := `INSERT INTO public.items
+		(chrt_id, track_number, price, rid, "name", sale, "size", total_price, nm_id, brand, status)
+		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id;
+		`
+		row := conn.QueryRow(context.Background(), insertItemQuery, val.ChrtID, val.TrackNumber,
+			val.Price, val.Rid, val.Name, val.Sale, val.Size, val.TotalPrice, val.NmID, val.Brand, val.Status)
+		err := row.Scan(&itemId)
+		if err != nil {
+			tx.Rollback(context.Background())
+			log.Println("error adding items")
+			return err
+		}
+		itemIds[i] = itemId
+	}
+	// Добавляем информацию о платеже
+	var paymentId int
+	insertPaymentQuery := `INSERT INTO payment
+	("transaction", request_id, currency, provider, amount, payment_dt, bank, delivery_cost, goods_total, custom_fee)
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id;
+	`
+	row := tx.QueryRow(context.Background(), insertPaymentQuery, order.Payment.Transaction,
+		order.Payment.RequestID, order.Payment.Currency, order.Payment.Provider, order.Payment.Amount, order.Payment.PaymentDt,
+		order.Payment.Bank, order.Payment.DeliveryCost, order.Payment.GoodsTotal, order.Payment.CustomFee)
+	err = row.Scan(&paymentId)
+	if err != nil {
+		log.Println("error adding payment")
+		tx.Rollback(context.Background())
+		return err
+	}
+	// Добавляем информацию о доставке
+	var deliveryId int
+	insertDeliveryQuery := `INSERT INTO delivery
+	("name", phone, zip, city, address, region, email)
+	VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id;
+	`
+	row = tx.QueryRow(context.Background(), insertDeliveryQuery, order.Delivery.Name, order.Delivery.Phone,
+		order.Delivery.Zip, order.Delivery.City, order.Delivery.Address, order.Delivery.Region, order.Delivery.Email)
+	err = row.Scan(&deliveryId)
+	if err != nil {
+		log.Println("error adding delivery")
+		tx.Rollback(context.Background())
+		return err
+	}
+	insertOrderQuery := `INSERT INTO orders
+	(order_uid, track_number, entry, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard, payment_id, delivery_id)
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id;`
+	row = tx.QueryRow(context.Background(), insertOrderQuery, order.OrderUID, order.TrackNumber, order.Entry, order.Locale, order.InternalSignature,
+		order.CustomerID, order.DeliveryService, order.Shardkey, order.SmID, order.DateCreated, order.OofShard, paymentId, deliveryId)
+	var orderId int
+	row.Scan(&orderId)
+	if err != nil {
+		log.Println("error adding order")
+		tx.Rollback(context.Background())
+		return err
+	}
+	for _, val := range itemIds {
+		insertItemOrderQuery := `INSERT INTO public.order_item
+		(order_id, item_id)
+		VALUES($1, $2);
+		`
+		_, err := tx.Exec(context.Background(), insertItemOrderQuery, orderId, val)
+		if err != nil {
+			log.Println("error adding order_item")
+			tx.Rollback(context.Background())
+			return err
+		}
+	}
+	tx.Commit(context.Background())
+	cache[service.OrderUID(order.OrderUID)] = order
+	return nil
 }

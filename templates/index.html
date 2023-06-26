@@ -14,7 +14,108 @@
     </form>
     {{.Message}}
     {{if .Success}}
-        <p>{{.Order.OrderUID}}</p>
+        <ul>
+            <li>OrderUID:{{.Order.OrderUID}}</li>
+            <li>Track Number {{.Order.TrackNumber}}</li>
+            <li>entry:{{.Order.Entry}}</li>
+            <li>Delivery: </li>
+            <ul>
+                <li>
+                    Name: {{.Order.Delivery.Name}}
+                </li>
+                <li>
+                    Phone: {{.Order.Delivery.Phone}}
+                </li>
+                <li>
+                    Zip: {{.Order.Delivery.Zip}}
+                </li>
+                <li>
+                    City: {{.Order.Delivery.City}}
+                </li>
+                <li>
+                    Address: {{.Order.Delivery.Address}}
+                </li>
+                <li>
+                    Region: {{.Order.Delivery.Region}}
+                </li>
+                <li>
+                    Email: {{.Order.Delivery.Email}}
+                </li>
+            </ul>
+            <p>Payment:</p>
+            <ul>
+                <ol>
+                    Transaction: {{.Order.Payment.Transaction}}
+                </ol>
+                <ol>
+                    Request Id: {{.Order.Payment.RequestID}}
+                </ol>
+                <ol>
+                    Currency: {{.Order.Payment.Currency}}
+                </ol>
+                <ol>
+                    Provider: {{.Order.Payment.Provider}}
+                </ol>
+                <ol>
+                    Amount: {{.Order.Payment.Amount}}
+                </ol>
+                <ol>
+                    Payment_dt: {{.Order.Payment.PaymentDt}}
+                </ol>
+                <ol>
+                    Bank: {{.Order.Payment.Bank}}
+                </ol>
+                <ol>
+                    Delivery cost: {{.Order.Payment.DeliveryCost}}
+                </ol>
+                <ol>
+                    Goods total: {{.Order.Payment.GoodsTotal}}
+                </ol>
+                <ol>
+                    Custom fee: {{.Order.Payment.CustomFee}}
+                </ol>
+            </ul>
+            <p>Items:</p>
+            <ul>
+                {{range .Order.Items}}
+                <ul>
+                    <li>
+                        chrt_id: {{.ChrtID}}
+                    </li>
+                    <li>
+                        track_number: {{.TrackNumber}}
+                    </li>
+                    <li>
+                        Price: {{.Price}}
+                    </li>
+                    <li>
+                        Rid: {{.Rid}}
+                    </li>
+                    <li>
+                        Name: {{.Name}}
+                    </li>
+                    <li>
+                        Sale: {{.Sale}}
+                    </li>
+                    <li>
+                        Size: {{.Size}}
+                    </li>
+                    <li>
+                        TotalPrice: {{.TotalPrice}}
+                    </li>
+                    <li>
+                        NmID: {{.NmID}}
+                    </li>
+                    <li>
+                        Brand: {{.Brand}}
+                    </li>
+                    <li>
+                        Status: {{.Status}}
+                    </li>
+                </ul>
+                {{end}}
+            </ul>
+        </ul>
     {{else}}
         <p>Введите корректный uid</p>
     {{end}}

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"lptnkv/orders/service"
@@ -21,7 +23,7 @@ var cache map[service.OrderUID]service.Order
 func main() {
 	// Router and endpoints
 	router := mux.NewRouter()
-	router.Handle("/", &service.AddOrderHandler{})
+	router.Handle("/", &service.IndexHandler{Cache: cache})
 	router.Handle("/order/{id}", &service.GetOrderHandler{Cache: cache})
 	router.Handle("/mock", &service.MockHandler{})
 	server := http.Server{
@@ -29,10 +31,29 @@ func main() {
 		Handler: router,
 	}
 
-	sc, _ := stan.Connect("test-cluster", "wb-l0-client")
-	sub, _ := sc.Subscribe("orders", func(m *stan.Msg) {
-		fmt.Println("Received a message: ", string(m.Data))
+	sc, err := stan.Connect("test-cluster", "wb-l0-client2")
+	if err != nil {
+		log.Fatalf("Could not connect to nats cluster: %+v", err)
+	}
+	log.Println("Connected to cluster")
+	sub, err := sc.Subscribe("orders", func(m *stan.Msg) {
+		log.Println("Received a message from topic")
+		received, err := DecodeToOrder(m.Data)
+		if err != nil {
+			log.Printf("Could not decode received data: %+v\n", err)
+			return
+		}
+		err = AddToDatabase(received)
+		if err != nil {
+			log.Printf("Could not add to database: %+v\n", err)
+			return
+		}
+		log.Println("Added new order to database")
 	})
+	if err != nil {
+		log.Fatalf("Could not subscribe to topic: %+v", err)
+	}
+	log.Println("Subscribed to topic")
 
 	// Запуска сервера
 	go func() {
@@ -54,12 +75,13 @@ func main() {
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	server.Shutdown(ctx)
 	sub.Unsubscribe()
+	log.Println("Unsubscribed from topic")
 	sc.Close()
+	log.Println("Closed connection to cluster")
 }
 
 func init() {
 	cache = make(map[service.OrderUID]service.Order)
-	cache["absd"] = service.Order{Entry: "a"}
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Some error occured. Err: %s", err)
@@ -156,4 +178,20 @@ func init() {
 		// Добавляем в кэш
 		cache[service.OrderUID(order.OrderUID)] = order
 	}
+}
+
+func DecodeToOrder(s []byte) (service.Order, error) {
+
+	o := service.Order{}
+	dec := gob.NewDecoder(bytes.NewReader(s))
+	err := dec.Decode(&o)
+	log.Println(o)
+	if err != nil {
+		return o, err
+	}
+	return o, nil
+}
+
+func AddToDatabase(order service.Order) error {
+
 }
